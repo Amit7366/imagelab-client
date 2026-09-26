@@ -1,0 +1,88 @@
+export type Role = "super_admin" | "admin" | "user";
+
+export interface PublicUser {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuthSession {
+  user: PublicUser;
+  accessToken: string;
+  refreshToken: string;
+}
+
+export interface ApiSuccess<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
+
+export interface PublicAsset {
+  id: string;
+  publicId: string;
+  bytes: number;
+  width: number;
+  height: number;
+  format: string;
+  mime: string;
+  originalName: string;
+  url: string;
+  transformUrl: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AssetListData {
+  items: PublicAsset[];
+  usage: {
+    usedBytes: number;
+    quotaBytes: number;
+  };
+}
+
+export interface RoleDefinition {
+  key: Role;
+  label: string;
+  rank: number;
+  permissions: string[];
+}
+
+export const ROLE_LABELS: Record<Role, string> = {
+  super_admin: "Super Admin",
+  admin: "Admin",
+  user: "User",
+};
+
+export function can(role: Role, permission: string) {
+  const map: Record<Role, string[]> = {
+    super_admin: [
+      "user:read",
+      "user:create",
+      "user:update",
+      "user:delete",
+      "role:read",
+      "role:assign",
+      "asset:upload",
+      "asset:read",
+      "asset:update",
+      "asset:delete",
+    ],
+    admin: [
+      "user:read",
+      "user:create",
+      "user:update",
+      "role:read",
+      "asset:upload",
+      "asset:read",
+      "asset:update",
+      "asset:delete",
+    ],
+    user: ["asset:upload", "asset:read", "asset:update", "asset:delete"],
+  };
+  return map[role].includes(permission);
+}

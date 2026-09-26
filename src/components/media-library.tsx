@@ -1,11 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
-import type { ApiSuccess, AssetListData, PublicAsset } from "@/lib/types";
+import type { ApiSuccess, AssetListData, PublicAsset, StorageUsage } from "@/lib/types";
 
 const ACCEPT = "image/jpeg,image/png,image/webp,image/gif,image/avif,application/pdf";
 const MAX_BYTES = 10 * 1024 * 1024;
+const EMPTY_USAGE: StorageUsage = {
+  usedBytes: 0,
+  quotaBytes: 25 * 1024 * 1024,
+  usedCredits: 0,
+  quotaCredits: 25,
+  remainingCredits: 25,
+  plan: "free",
+  canUpload: true,
+};
 
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -59,7 +69,7 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
   const [notice, setNotice] = useState("");
   const [uploading, setUploading] = useState("");
   const [items, setItems] = useState<PublicAsset[]>([]);
-  const [usage, setUsage] = useState({ usedBytes: 0, quotaBytes: MAX_BYTES });
+  const [usage, setUsage] = useState<StorageUsage>(EMPTY_USAGE);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [focusId, setFocusId] = useState<string | null>(null);
   const [panelTab, setPanelTab] = useState<"summary" | "metadata">("summary");
@@ -138,6 +148,10 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
   async function uploadFiles(files: FileList | File[]) {
     const list = [...files];
     if (!list.length) return;
+    if (!usage.canUpload) {
+      setError("Credits finished. Upgrade your plan to upload more.");
+      return;
+    }
     setError("");
     setConfirmBulk(false);
     for (const [index, file] of list.entries()) {
@@ -158,7 +172,11 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
         setSelected(new Set([result.data.id]));
       } catch (err) {
         setUploading("");
-        setError(err instanceof ApiError || err instanceof Error ? err.message : "Upload failed");
+        if (err instanceof ApiError && err.status === 402) {
+          setError("Credits finished. Upgrade your plan to upload more.");
+        } else {
+          setError(err instanceof ApiError || err instanceof Error ? err.message : "Upload failed");
+        }
         return;
       }
     }
@@ -251,7 +269,11 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
       setMenu(null);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not replace file");
+      if (err instanceof ApiError && err.status === 402) {
+        setError("Credits finished. Upgrade your plan to upload more.");
+      } else {
+        setError(err instanceof Error ? err.message : "Could not replace file");
+      }
     } finally {
       setBusy(false);
     }
@@ -286,10 +308,17 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
         </label>
         <button
           type="button"
-          onClick={() => uploadInputRef.current?.click()}
-          className="shrink-0 rounded-full bg-apricot px-4 py-2 text-sm text-paper"
+          disabled={!usage.canUpload || Boolean(uploading)}
+          onClick={() => {
+            if (!usage.canUpload) {
+              setError("Credits finished. Upgrade your plan to upload more.");
+              return;
+            }
+            uploadInputRef.current?.click();
+          }}
+          className="shrink-0 rounded-full bg-apricot px-4 py-2 text-sm text-paper disabled:opacity-50"
         >
-          {uploading || "Upload"}
+          {uploading || (usage.canUpload ? "Upload" : "Upgrade")}
         </button>
         <input
           ref={uploadInputRef}
@@ -308,20 +337,25 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
         className="relative flex min-h-0 flex-1"
         onDragOver={(event) => {
           event.preventDefault();
+          if (!usage.canUpload) return;
           setDragOver(true);
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={(event) => {
           event.preventDefault();
           setDragOver(false);
+          if (!usage.canUpload) {
+            setError("Credits finished. Upgrade your plan to upload more.");
+            return;
+          }
           void uploadFiles(event.dataTransfer.files);
         }}
       >
         <section className={`min-w-0 flex-1 overflow-y-auto p-5 ${dragOver ? "bg-copper/5" : ""} ${focused ? "pr-[23.5rem]" : ""}`}>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-sm">
             <p className="text-ink/60">
-              {items.length} {items.length === 1 ? "asset" : "assets"} · {formatBytes(usage.usedBytes)} of{" "}
-              {formatBytes(usage.quotaBytes)}
+              {items.length} {items.length === 1 ? "asset" : "assets"} · {usage.usedCredits} / {usage.quotaCredits} credits ·{" "}
+              {formatBytes(usage.usedBytes)} of {formatBytes(usage.quotaBytes)}
             </p>
             {selected.size > 0 ? (
               <div className="flex flex-wrap items-center gap-3">
@@ -364,8 +398,26 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
             ) : null}
           </div>
 
-          {error ? <p className="mb-3 text-sm text-copper">{error}</p> : null}
+          {error ? (
+            <p className="mb-3 text-sm text-copper">
+              {error}{" "}
+              {error.toLowerCase().includes("credit") ? (
+                <Link href="/dashboard/billing" className="underline">
+                  Update plan
+                </Link>
+              ) : null}
+            </p>
+          ) : null}
           {notice ? <p className="mb-3 text-sm text-pine">{notice}</p> : null}
+          {!usage.canUpload ? (
+            <p className="mb-3 rounded-xl border border-copper/30 bg-copper/5 px-4 py-3 text-sm">
+              Credits finished. Public URLs still work.{" "}
+              <Link href="/dashboard/billing" className="underline">
+                Update your plan
+              </Link>{" "}
+              to upload more.
+            </p>
+          ) : null}
 
           {items.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-line bg-paper px-6 py-16 text-center">

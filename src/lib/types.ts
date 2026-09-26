@@ -1,4 +1,5 @@
 export type Role = "super_admin" | "admin" | "user";
+export type PlanId = "free" | "starter" | "pro";
 
 export interface PublicUser {
   id: string;
@@ -6,6 +7,7 @@ export interface PublicUser {
   email: string;
   role: Role;
   isActive: boolean;
+  plan: PlanId;
   createdAt: string;
   updatedAt: string;
 }
@@ -39,10 +41,32 @@ export interface PublicAsset {
 
 export interface AssetListData {
   items: PublicAsset[];
-  usage: {
-    usedBytes: number;
-    quotaBytes: number;
-  };
+  usage: StorageUsage;
+}
+
+export interface StorageUsage {
+  usedBytes: number;
+  quotaBytes: number;
+  usedCredits: number;
+  quotaCredits: number;
+  remainingCredits: number;
+  plan: PlanId;
+  canUpload: boolean;
+}
+
+export interface BillingPlan {
+  id: PlanId;
+  name: string;
+  priceCents: number;
+  interval: "month";
+  credits: number;
+  quotaBytes: number;
+}
+
+export interface BillingPlansData {
+  stripeEnabled: boolean;
+  current: StorageUsage & { subscriptionStatus: string | null };
+  plans: BillingPlan[];
 }
 
 export interface RoleDefinition {
@@ -51,6 +75,12 @@ export interface RoleDefinition {
   rank: number;
   permissions: string[];
 }
+
+export const PLAN_LABELS: Record<PlanId, string> = {
+  free: "Free",
+  starter: "Starter",
+  pro: "Pro",
+};
 
 export const ROLE_LABELS: Record<Role, string> = {
   super_admin: "Super Admin",

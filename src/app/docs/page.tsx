@@ -53,7 +53,9 @@ export default function DocsPage() {
               </Link>
               .
             </li>
-            <li>Store the secret on your server. ImageLab shows it once.</li>
+            <li>
+              Store the secret on your server, or reveal it later from View details if you lose it.
+            </li>
             <li>Upload from your backend with the Bearer header. Use the returned <code>url</code> in your app.</li>
           </ol>
           <p className="mt-4">Production base: <code>{LIVE_API}</code>. Local: <code>{LOCAL_API}</code> (this machine uses port 5050).</p>
@@ -88,9 +90,9 @@ const json = await res.json();
             with <code>il_sk_live_</code>.
           </p>
           <p className="mt-3">
-            Secrets are hashed at rest. You can create up to 8 active keys, each with scopes: upload, read, update, delete. Revoking
-            a key is permanent. API keys cannot call billing, users, roles, auth, or key-management routes — those need a dashboard
-            session.
+            Secrets are stored encrypted so you can reveal them later from Dashboard → API keys → View details. You can create up to
+            8 active keys, each with scopes: upload, read, update, delete. Revoking a key is permanent. API keys cannot call billing,
+            users, roles, auth, or key-management routes — those need a dashboard session.
           </p>
           <p className="mt-3 font-medium text-ink">Never put a secret key in a website, mobile app, or public repository.</p>
         </section>

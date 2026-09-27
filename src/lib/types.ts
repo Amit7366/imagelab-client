@@ -99,6 +99,7 @@ export interface PublicApiKey {
   status: "active" | "revoked";
   lastUsedAt: string | null;
   createdAt: string;
+  canReveal: boolean;
 }
 
 export interface CreatedApiKey extends PublicApiKey {

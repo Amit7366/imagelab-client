@@ -30,6 +30,8 @@ export default function ApiKeysPage() {
   const [name, setName] = useState("Production");
   const [scopes, setScopes] = useState<AssetKeyScope[]>([...ASSET_SCOPES]);
   const [created, setCreated] = useState<CreatedApiKey | null>(null);
+  const [details, setDetails] = useState<PublicApiKey | null>(null);
+  const [revealed, setRevealed] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
@@ -52,6 +54,27 @@ export default function ApiKeysPage() {
     void load().catch((err) => setError(err instanceof Error ? err.message : "Could not load API keys"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
+
+  useEffect(() => {
+    setDetails((current) => {
+      if (!current) return null;
+      return keys.find((key) => key.id === current.id) ?? null;
+    });
+  }, [keys]);
+
+  useEffect(() => {
+    if (!details) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setDetails(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [details]);
+
+  useEffect(() => {
+    setRevealed(null);
+    setCopied(false);
+  }, [details?.id]);
 
   function toggleScope(scope: AssetKeyScope) {
     setScopes((current) => {
@@ -99,13 +122,27 @@ export default function ApiKeysPage() {
     }
   }
 
-  async function copySecret() {
-    if (!created) return;
+  async function copyText(value: string) {
     try {
-      await navigator.clipboard.writeText(created.secret);
+      await navigator.clipboard.writeText(value);
       setCopied(true);
     } catch {
       setError("Could not copy the secret. Select it and copy manually.");
+    }
+  }
+
+  async function revealSecret(id: string) {
+    if (!accessToken) return;
+    setBusy("reveal");
+    setError("");
+    setCopied(false);
+    try {
+      const result = await api<ApiSuccess<{ secret: string }>>(`/api-keys/${id}/reveal`, { method: "POST" }, accessToken);
+      setRevealed(result.data.secret);
+    } catch (err) {
+      setError(err instanceof ApiError || err instanceof Error ? err.message : "Could not reveal API key");
+    } finally {
+      setBusy("");
     }
   }
 
@@ -126,10 +163,10 @@ export default function ApiKeysPage() {
 
       {created ? (
         <section className="mt-8 max-w-2xl rounded-2xl border border-copper bg-paper p-5">
-          <p className="text-sm font-medium text-copper">Copy this secret now. ImageLab will not show it again.</p>
+          <p className="text-sm font-medium text-copper">Secret for this key. You can also reveal it later from View details.</p>
           <p className="mt-3 break-all rounded-xl bg-sand px-4 py-3 font-mono text-sm">{created.secret}</p>
           <div className="mt-4 flex flex-wrap gap-3">
-            <button type="button" onClick={() => void copySecret()} className="rounded-full bg-apricot px-4 py-2 text-sm text-paper">
+            <button type="button" onClick={() => void copyText(created.secret)} className="rounded-full bg-apricot px-4 py-2 text-sm text-paper">
               {copied ? "Copied" : "Copy secret"}
             </button>
             <button type="button" onClick={() => setCreated(null)} className="rounded-full border border-line px-4 py-2 text-sm">
@@ -192,24 +229,132 @@ export default function ApiKeysPage() {
                 </p>
                 <p className="mt-1 text-xs text-ink/50">Last used {formatWhen(key.lastUsedAt)}</p>
               </div>
-              {key.status === "active" ? (
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  disabled={Boolean(busy)}
-                  onClick={() => void revokeKey(key.id)}
-                  className="rounded-full border border-line px-4 py-2 text-sm disabled:opacity-50"
+                  onClick={() => setDetails(key)}
+                  className="rounded-full border border-line px-4 py-2 text-sm"
                 >
-                  {busy === key.id ? "Revoking…" : "Revoke"}
+                  View details
                 </button>
-              ) : (
-                <span className="rounded-full bg-sand px-3 py-1 text-xs text-ink/50">Revoked</span>
-              )}
+                {key.status === "active" ? (
+                  <button
+                    type="button"
+                    disabled={Boolean(busy)}
+                    onClick={() => void revokeKey(key.id)}
+                    className="rounded-full border border-line px-4 py-2 text-sm disabled:opacity-50"
+                  >
+                    {busy === key.id ? "Revoking…" : "Revoke"}
+                  </button>
+                ) : (
+                  <span className="rounded-full bg-sand px-3 py-1 text-xs text-ink/50">Revoked</span>
+                )}
+              </div>
             </div>
           </li>
         ))}
       </ul>
 
       {keys.length === 0 ? <p className="mt-8 text-sm text-ink/50">No keys yet. Create one to call the media API.</p> : null}
+
+      {details ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
+          onClick={() => setDetails(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="api-key-details-title"
+            onClick={(event) => event.stopPropagation()}
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-line bg-paper p-6"
+          >
+            <p className="text-sm uppercase tracking-[0.2em] text-copper">API key</p>
+            <h3 id="api-key-details-title" className="mt-2 font-serif text-3xl">
+              {details.name}
+            </h3>
+            <p className="mt-2 font-mono text-sm text-ink/70">{maskKey(details)}</p>
+            <p className="mt-3 text-sm text-ink/60">
+              If you lost the secret, reveal it here. Keep it on your server, never in a browser or public repo.
+            </p>
+
+            {revealed ? (
+              <div className="mt-4">
+                <p className="break-all rounded-xl bg-sand px-4 py-3 font-mono text-sm">{revealed}</p>
+                <button
+                  type="button"
+                  onClick={() => void copyText(revealed)}
+                  className="mt-3 rounded-full bg-apricot px-4 py-2 text-sm text-paper"
+                >
+                  {copied ? "Copied" : "Copy secret"}
+                </button>
+              </div>
+            ) : details.canReveal ? (
+              <button
+                type="button"
+                disabled={Boolean(busy)}
+                onClick={() => void revealSecret(details.id)}
+                className="mt-4 rounded-full bg-apricot px-4 py-2 text-sm text-paper disabled:opacity-50"
+              >
+                {busy === "reveal" ? "Revealing…" : "Reveal secret"}
+              </button>
+            ) : (
+              <p className="mt-4 text-sm text-copper">
+                This key was created before secrets could be stored. Create a new key to reveal it later.
+              </p>
+            )}
+
+            {error ? <p className="mt-3 text-sm text-copper">{error}</p> : null}
+
+            <dl className="mt-5 grid gap-3 text-sm">
+              <div className="flex justify-between gap-4 border-b border-line pb-2">
+                <dt className="text-ink/50">Status</dt>
+                <dd>{details.status === "active" ? "Active" : "Revoked"}</dd>
+              </div>
+              <div className="flex justify-between gap-4 border-b border-line pb-2">
+                <dt className="text-ink/50">Scopes</dt>
+                <dd className="text-right">
+                  {details.scopes.map((scope) => ASSET_SCOPE_LABELS[scope]).join(", ") || "None"}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4 border-b border-line pb-2">
+                <dt className="text-ink/50">Created</dt>
+                <dd>{formatWhen(details.createdAt)}</dd>
+              </div>
+              <div className="flex justify-between gap-4 border-b border-line pb-2">
+                <dt className="text-ink/50">Last used</dt>
+                <dd>{formatWhen(details.lastUsedAt)}</dd>
+              </div>
+            </dl>
+
+            <pre className="mt-5 overflow-x-auto rounded-xl bg-plum p-4 text-xs leading-6 text-paper">
+              <code>{`Authorization: Bearer ${revealed ?? maskKey(details)}`}</code>
+            </pre>
+
+            <p className="mt-4 text-sm">
+              <Link href="/docs" className="underline">
+                API docs
+              </Link>
+            </p>
+
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button type="button" onClick={() => setDetails(null)} className="rounded-full border border-ink px-4 py-2 text-sm">
+                Close
+              </button>
+              {details.status === "active" ? (
+                <button
+                  type="button"
+                  disabled={Boolean(busy)}
+                  onClick={() => void revokeKey(details.id)}
+                  className="rounded-full border border-line px-4 py-2 text-sm disabled:opacity-50"
+                >
+                  {busy === details.id ? "Revoking…" : "Revoke"}
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

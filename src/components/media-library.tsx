@@ -333,7 +333,7 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
 
   return (
     <div id="library" className="flex h-full min-h-0 flex-col">
-      <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-white/10 px-5 py-3">
+      <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/10 px-3 py-3 sm:gap-3 sm:px-5">
         <div className="flex flex-wrap items-center gap-1">
           {(
             [
@@ -429,7 +429,7 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
           void uploadFiles(event.dataTransfer.files);
         }}
       >
-        <section className={`min-w-0 flex-1 overflow-y-auto p-5 ${dragOver ? "bg-copper/5" : ""} ${focused ? "pr-[23.5rem]" : ""}`}>
+        <section className={`min-w-0 flex-1 overflow-y-auto p-3 sm:p-5 ${dragOver ? "bg-copper/5" : ""} ${focused ? "sm:pr-[23.5rem]" : ""}`}>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-sm">
             <p className="text-ink/60">
               {items.length} {items.length === 1 ? "asset" : "assets"} · {usage.usedCredits} / {usage.quotaCredits} credits ·{" "}
@@ -547,7 +547,7 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
                       }}
                     >
                       <span className="material-symbols-outlined text-[14px]">content_copy</span>
-                      Copy URL
+                      <span className="hidden sm:inline">Copy URL</span>
                     </button>
                     <button
                       type="button"
@@ -645,7 +645,7 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
         </section>
 
         {focused ? (
-          <aside className="absolute inset-y-0 right-0 z-20 flex w-[22rem] flex-col border-l border-line bg-paper shadow-xl">
+          <aside className="absolute inset-y-0 right-0 z-20 flex w-full flex-col border-l border-line bg-paper shadow-xl sm:w-[22rem]">
             <div className="flex items-center justify-between border-b border-line px-4 py-3">
               <p className="truncate text-sm font-medium">{focused.originalName}</p>
               <button

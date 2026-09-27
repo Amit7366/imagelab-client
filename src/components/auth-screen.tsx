@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLayoutEffect, useRef } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { stitchAuthMarkup } from "@/components/stitch-auth-markup";
+import { attachMobileMenu } from "@/components/stitch-mobile-nav";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -216,7 +217,10 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
         });
     });
 
+    const detachMenu = attachMobileMenu(root);
+
     return () => {
+      detachMenu();
       cleanups.forEach((cleanup) => cleanup());
     };
   }, [login, mode, register, router]);
@@ -224,7 +228,7 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
   return (
     <div
       ref={rootRef}
-      className={`${jakarta.variable} ${inter.variable} ${mono.variable} min-h-screen bg-surface font-body-md text-body-md text-on-surface antialiased`}
+      className={`il-stitch ${jakarta.variable} ${inter.variable} ${mono.variable} min-h-screen bg-surface font-body-md text-body-md text-on-surface antialiased`}
       dangerouslySetInnerHTML={{ __html: stitchAuthMarkup }}
     />
   );

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { stitchHomeMarkup } from "@/components/stitch-home-markup";
+import { attachMobileMenu } from "@/components/stitch-mobile-nav";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -69,7 +70,12 @@ export function HomeMarketing() {
     const start = root.querySelector('[data-path="start-free"]');
     if (start) {
       start.setAttribute("href", signedIn ? "/dashboard" : "/register");
-      start.textContent = signedIn ? "Open dashboard" : "Start Free — 25 GB Included";
+      const long = start.querySelector(".il-cta-long");
+      const short = start.querySelector(".il-cta-short");
+      if (long && short) {
+        long.textContent = signedIn ? "Open dashboard" : "Start Free — 25 GB Included";
+        short.textContent = signedIn ? "Dashboard" : "Start free";
+      }
     }
 
     root.querySelector('[data-path="account"]')?.setAttribute("href", signedIn ? "/dashboard" : "/login");
@@ -187,7 +193,20 @@ export function HomeMarketing() {
       });
     });
 
+    const detachMenu = attachMobileMenu(root);
+    if (signedIn) {
+      const list = root.querySelector(".il-menu-list");
+      const item = document.createElement("button");
+      item.type = "button";
+      item.textContent = "Log out";
+      item.addEventListener("click", () => {
+        void logout();
+      });
+      list?.appendChild(item);
+    }
+
     return () => {
+      detachMenu();
       logoutBtn?.remove();
       cleanups.forEach((cleanup) => cleanup());
     };
@@ -196,7 +215,7 @@ export function HomeMarketing() {
   return (
     <div
       ref={rootRef}
-      className={`${jakarta.variable} ${inter.variable} ${mono.variable} min-h-screen bg-surface font-body-md text-body-md text-on-surface antialiased`}
+      className={`il-stitch ${jakarta.variable} ${inter.variable} ${mono.variable} min-h-screen bg-surface font-body-md text-body-md text-on-surface antialiased`}
       dangerouslySetInnerHTML={{ __html: stitchHomeMarkup }}
     />
   );

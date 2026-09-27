@@ -53,6 +53,7 @@ export function MediaLibraryShell({ children }: { children: React.ReactNode }) {
   const [credits, setCredits] = useState<Credits | null>(null);
   const [hash, setHash] = useState("");
   const [search, setSearch] = useState("");
+  const [navOpen, setNavOpen] = useState(false);
 
   useEffect(() => {
     const read = () => setHash(window.location.hash);
@@ -60,6 +61,10 @@ export function MediaLibraryShell({ children }: { children: React.ReactNode }) {
     window.addEventListener("hashchange", read);
     return () => window.removeEventListener("hashchange", read);
   }, [pathname]);
+
+  useEffect(() => {
+    setNavOpen(false);
+  }, [pathname, hash]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -124,8 +129,17 @@ export function MediaLibraryShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={`console flex h-full min-h-0 flex-col bg-surface-dark text-on-surface ${jakarta.variable} ${inter.variable} ${mono.variable}`}>
-      <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-white/10 bg-surface-dark/80 px-4 backdrop-blur-xl">
-        <div className="flex min-w-0 items-center gap-3">
+      <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-surface-dark/80 px-3 backdrop-blur-xl sm:gap-4 sm:px-4">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            className="inline-flex size-9 items-center justify-center rounded-lg bg-surface-container text-on-surface md:hidden"
+            aria-expanded={navOpen}
+            aria-label={navOpen ? "Close menu" : "Open menu"}
+            onClick={() => setNavOpen((open) => !open)}
+          >
+            <Icon name={navOpen ? "close" : "menu"} className="text-[22px]" />
+          </button>
           <Link href="/" className="flex shrink-0 items-center">
             <BrandLogo tone="on-dark" height={28} priority />
           </Link>
@@ -139,7 +153,26 @@ export function MediaLibraryShell({ children }: { children: React.ReactNode }) {
             </div>
           ) : null}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            className="inline-flex size-9 items-center justify-center rounded-lg text-on-surface-variant sm:hidden"
+            aria-label="Search assets"
+            onClick={() => {
+              setNavOpen(false);
+              if (pathname !== "/dashboard" || window.location.hash !== "#library") {
+                router.push("/dashboard#library");
+              }
+              const focusSearch = (attempt = 0) => {
+                const field = document.getElementById("asset-search");
+                if (field) field.focus();
+                else if (attempt < 12) window.setTimeout(() => focusSearch(attempt + 1), 80);
+              };
+              focusSearch();
+            }}
+          >
+            <Icon name="search" className="text-[22px]" />
+          </button>
           <form onSubmit={submitSearch} className="hidden items-center sm:flex">
             <label className="flex items-center gap-2 rounded-lg bg-surface-container-low px-3 py-1.5 text-on-surface-variant">
               <Icon name="search" className="text-[18px]" />
@@ -166,7 +199,19 @@ export function MediaLibraryShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <div className="flex min-h-0 flex-1">
-        <aside className="flex w-64 shrink-0 flex-col justify-between overflow-y-auto border-r border-white/10 bg-surface-container-lowest p-4">
+        {navOpen ? (
+          <button
+            type="button"
+            className="fixed inset-0 top-16 z-30 bg-black/50 md:hidden"
+            aria-label="Close menu"
+            onClick={() => setNavOpen(false)}
+          />
+        ) : null}
+        <aside
+          className={`flex w-64 shrink-0 flex-col justify-between overflow-y-auto border-r border-white/10 bg-surface-container-lowest p-4 max-md:fixed max-md:inset-y-16 max-md:left-0 max-md:z-40 max-md:w-[min(18rem,88vw)] max-md:shadow-2xl ${
+            navOpen ? "max-md:flex" : "max-md:hidden"
+          }`}
+        >
           <nav className="flex flex-col gap-5">
             {groups.map((group) => (
               <div key={group}>
@@ -181,6 +226,7 @@ export function MediaLibraryShell({ children }: { children: React.ReactNode }) {
                           <Link
                             href={link.href}
                             onClick={() => {
+                              setNavOpen(false);
                               window.setTimeout(() => setHash(window.location.hash), 0);
                             }}
                             className={`flex items-center gap-2 rounded-lg px-3 py-2 text-body-sm transition-colors ${
@@ -206,6 +252,7 @@ export function MediaLibraryShell({ children }: { children: React.ReactNode }) {
                     <li>
                       <Link
                         href="/dashboard/admin"
+                        onClick={() => setNavOpen(false)}
                         className={`flex items-center gap-2 rounded-lg px-3 py-2 text-body-sm transition-colors ${
                           active("/dashboard/admin")
                             ? "bg-primary-container font-semibold text-on-primary-container"
@@ -220,6 +267,7 @@ export function MediaLibraryShell({ children }: { children: React.ReactNode }) {
                   <li>
                     <Link
                       href="/dashboard/admin/users"
+                      onClick={() => setNavOpen(false)}
                       className={`flex items-center gap-2 rounded-lg px-3 py-2 text-body-sm transition-colors ${
                         active("/dashboard/admin/users")
                           ? "bg-primary-container font-semibold text-on-primary-container"

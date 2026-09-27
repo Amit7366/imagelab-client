@@ -314,6 +314,137 @@ body {
   }
 }
 
+.il-cta-short {
+  display: none;
+}
+
+.il-menu-toggle {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .il-stitch {
+    overflow-x: clip;
+  }
+
+  .il-stitch header > div {
+    height: 4rem;
+    gap: 0.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .il-stitch header > div > .shrink-0 {
+    gap: 0.4rem;
+  }
+
+  .il-stitch header img {
+    height: 1.45rem;
+    width: auto;
+    max-width: 34vw;
+  }
+
+  .il-stitch main {
+    padding-top: 4rem;
+  }
+
+  .il-stitch .px-gutter {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .il-stitch h1.font-display-hero,
+  .il-stitch .text-display-hero {
+    font-size: 2.15rem;
+    line-height: 2.45rem;
+  }
+
+  .il-stitch .text-headline-lg {
+    font-size: 1.7rem;
+    line-height: 2.15rem;
+  }
+
+  .il-stitch [data-path="start-free"] {
+    padding: 0.5rem 0.7rem;
+    white-space: nowrap;
+  }
+
+  .il-cta-long {
+    display: none;
+  }
+
+  .il-cta-short {
+    display: inline;
+  }
+
+  .il-menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.5rem;
+    color: #dfe2f1;
+    background: #1c1f2a;
+  }
+
+  .il-menu-panel {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    z-index: 60;
+    max-height: calc(100dvh - 4rem);
+    overflow: auto;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: #0f131d;
+    padding: 0.5rem 0.75rem 1rem;
+  }
+
+  .il-menu-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .il-menu-list a,
+  .il-menu-list button {
+    display: block;
+    width: 100%;
+    border-radius: 0.6rem;
+    padding: 0.7rem 0.75rem;
+    text-align: left;
+    color: #dfe2f1;
+  }
+
+}
+
+@media (max-width: 1023px) {
+  .il-stitch #tab-btn-url,
+  .il-stitch #tab-btn-ai,
+  .il-stitch #tab-btn-video {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 767px) {
+  .console header img {
+    height: 1.5rem !important;
+    width: auto !important;
+  }
+
+  .console .p-8,
+  .console .p-5 {
+    padding: 1rem;
+  }
+
+  .console h1 {
+    font-size: 1.75rem;
+    line-height: 2.15rem;
+  }
+}
+
 .material-symbols-outlined {
   font-family: "Material Symbols Outlined";
   font-weight: normal;

@@ -39,7 +39,7 @@ export function ConsoleOverview() {
   const activeKeys = keys.filter((key) => key.status === "active").length;
 
   return (
-    <section className="shrink-0 border-b border-white/10 px-6 py-5">
+    <section className="shrink-0 border-b border-white/10 px-4 py-4 sm:px-6 sm:py-5">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
         <div>
           <p className="font-label-badge text-[11px] text-on-surface-variant">
@@ -47,12 +47,12 @@ export function ConsoleOverview() {
             <span> / </span>
             <span>{usage ? PLAN_LABELS[usage.plan] : "Plan"}</span>
           </p>
-          <h1 className="font-headline-lg text-3xl font-bold tracking-tight text-on-surface md:text-4xl">Developer Console</h1>
+          <h1 className="font-headline-lg text-2xl font-bold tracking-tight text-on-surface sm:text-3xl md:text-4xl">Developer Console</h1>
           <p className="mt-1 max-w-2xl text-body-sm text-on-surface-variant">
             Upload media, deliver public URLs, and manage the keys that call the API.
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto">
           <Link
             href="/dashboard/api-keys"
             className="flex items-center gap-1 rounded-lg bg-surface-container px-4 py-2.5 text-sm text-on-surface hover:bg-surface-container-high"

@@ -70,6 +70,12 @@ export function MediaLibraryShell({ children }: { children: React.ReactNode }) {
           >
             Billing
           </Link>
+          <Link
+            href="/dashboard/api-keys"
+            className={`mt-1 block rounded-lg px-3 py-2 ${pathname.startsWith("/dashboard/api-keys") ? "bg-white/15 text-paper" : "text-white/70 hover:bg-white/10 hover:text-paper"}`}
+          >
+            API keys
+          </Link>
           {user && can(user.role, "user:read") ? (
             <>
               <p className="mt-6 px-2 text-[11px] font-medium uppercase tracking-[0.18em] text-white/40">Admin</p>

@@ -14,6 +14,9 @@ export function SiteHeader() {
           ImageLab
         </Link>
         <nav className="flex items-center gap-4 text-sm">
+          <Link href="/docs" className="hover:text-copper">
+            Docs
+          </Link>
           {user ? (
             <>
               <Link href="/dashboard" className="hover:text-copper">

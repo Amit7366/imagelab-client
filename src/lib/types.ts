@@ -88,6 +88,32 @@ export const ROLE_LABELS: Record<Role, string> = {
   user: "User",
 };
 
+export type AssetKeyScope = "asset:upload" | "asset:read" | "asset:update" | "asset:delete";
+
+export interface PublicApiKey {
+  id: string;
+  name: string;
+  prefix: string;
+  lastFour: string;
+  scopes: AssetKeyScope[];
+  status: "active" | "revoked";
+  lastUsedAt: string | null;
+  createdAt: string;
+}
+
+export interface CreatedApiKey extends PublicApiKey {
+  secret: string;
+}
+
+export const ASSET_SCOPE_LABELS: Record<AssetKeyScope, string> = {
+  "asset:upload": "Upload",
+  "asset:read": "Read",
+  "asset:update": "Update",
+  "asset:delete": "Delete",
+};
+
+export const ASSET_SCOPES: AssetKeyScope[] = ["asset:upload", "asset:read", "asset:update", "asset:delete"];
+
 export function can(role: Role, permission: string) {
   const map: Record<Role, string[]> = {
     super_admin: [

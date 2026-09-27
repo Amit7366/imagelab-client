@@ -7,7 +7,7 @@ import { useAuth } from "@/components/auth-provider";
 const nav = [
   { label: "Platform", href: "#platform" },
   { label: "Solutions", href: "#solutions" },
-  { label: "Developers", href: "#developers" },
+  { label: "Developers", href: "/docs" },
   { label: "Lifecycle", href: "#lifecycle" },
 ];
 
@@ -140,7 +140,7 @@ export function HomeMarketing() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href={primaryHref} className="rounded-full bg-[#ff5c39] px-5 py-3 text-sm font-medium text-white">{primaryLabel}</Link>
-              <a href="#developers" className="rounded-full border border-white/20 bg-white/5 px-5 py-3 text-sm">See the URL</a>
+              <Link href="/docs" className="rounded-full border border-white/20 bg-white/5 px-5 py-3 text-sm">API docs</Link>
             </div>
             <dl className="mt-12 grid max-w-lg grid-cols-3 gap-4 border-t border-white/10 pt-6">
               {[
@@ -203,7 +203,7 @@ export function HomeMarketing() {
         <div className="mx-auto max-w-[1180px] px-5 py-16">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <h2 className="font-serif text-4xl">Connects to the stack around the album.</h2>
-            <a href="#developers" className="text-sm text-[#ff5c39]">Read the path format →</a>
+            <Link href="/docs" className="text-sm text-[#ff5c39]">Read the API docs →</Link>
           </div>
           <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {logos.map((name) => (
@@ -275,15 +275,20 @@ export function HomeMarketing() {
                 ))}
               </ul>
             </div>
-            <pre className="overflow-x-auto rounded-2xl bg-[#1c1424] p-5 text-[13px] leading-7 text-[#f7f3ec]">
-              <code>{`GET /image/upload/w_800,f_auto/{id}
+            <div>
+              <pre className="overflow-x-auto rounded-2xl bg-[#1c1424] p-5 text-[13px] leading-7 text-[#f7f3ec]">
+                <code>{`GET /image/upload/w_800,f_auto/{id}
 
 # master
 /image/upload/{id}
 
 # thumbnail
 /image/upload/w_400,f_auto/{id}`}</code>
-            </pre>
+              </pre>
+              <Link href="/docs" className="mt-4 inline-block text-sm font-medium text-[#ff5c39]">
+                Full API docs →
+              </Link>
+            </div>
           </div>
         </div>
       </section>
@@ -397,9 +402,9 @@ export function HomeMarketing() {
             <p className="font-serif text-2xl text-[#f7f3ec]">ImageLab</p>
             <p className="mt-3 max-w-xs text-sm leading-6">Upload, store, and share images from this server.</p>
           </div>
-          <FooterCol title="Product" links={[["Album", "/dashboard"], ["Transforms", "#developers"], ["Roles", "#platform"]]} />
+          <FooterCol title="Product" links={[["Album", "/dashboard"], ["API docs", "/docs"], ["Roles", "#platform"]]} />
           <FooterCol title="Account" links={[["Log in", "/login"], ["Register", "/register"], ["Dashboard", "/dashboard"]]} />
-          <FooterCol title="Delivery" links={[["Public URL", "#developers"], ["Width", "#lifecycle"], ["Format", "#developers"]]} />
+          <FooterCol title="Delivery" links={[["Public URL", "/docs"], ["Transforms", "/docs#delivery"], ["API keys", "/dashboard/api-keys"]]} />
         </div>
       </footer>
     </div>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
+import { BrandLogo } from "@/components/brand-logo";
 import { ROLE_LABELS } from "@/lib/types";
 
 export function SiteHeader() {
@@ -10,8 +11,8 @@ export function SiteHeader() {
   return (
     <header className="border-b border-line bg-paper">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-        <Link href="/" className="font-serif text-2xl tracking-tight">
-          ImageLab
+        <Link href="/" className="flex items-center">
+          <BrandLogo tone="on-light" height={34} priority />
         </Link>
         <nav className="flex items-center gap-4 text-sm">
           <Link href="/docs" className="hover:text-copper">

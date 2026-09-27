@@ -36,7 +36,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const stored = readSession();
     if (!stored) {
-      queueMicrotask(() => setReady(true));
+      queueMicrotask(() => {
+        setReady(true);
+        window.dispatchEvent(new Event("imagelab-ready"));
+      });
       return;
     }
 
@@ -58,7 +61,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.removeItem(STORAGE_KEY);
         }
       })
-      .finally(() => setReady(true));
+      .finally(() => {
+        setReady(true);
+        window.dispatchEvent(new Event("imagelab-ready"));
+      });
   }, []);
 
   const value = useMemo<AuthContextValue>(

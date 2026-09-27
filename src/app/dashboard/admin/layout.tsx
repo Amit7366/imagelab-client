@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "@/components/auth-provider";
+import { BrandLoader } from "@/components/preloader";
 import { can } from "@/lib/types";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -19,7 +20,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [router, user]);
 
   if (!user || !can(user.role, "user:read")) {
-    return <p className="p-8 text-sm text-ink/70">Opening admin…</p>;
+    return <BrandLoader label="Opening admin" />;
   }
 
   return (

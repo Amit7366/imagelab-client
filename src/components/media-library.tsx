@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import type { ApiSuccess, AssetListData, PublicAsset, StorageUsage } from "@/lib/types";
 
@@ -41,6 +42,14 @@ function previewSrc(asset: PublicAsset) {
   return `${asset.url}?v=${stamp}`;
 }
 
+function transformTokens(asset: PublicAsset) {
+  const marker = `/${asset.publicId}`;
+  const index = asset.transformUrl.lastIndexOf(marker);
+  if (index <= 0) return [];
+  const segment = asset.transformUrl.slice(0, index).split("/").pop() ?? "";
+  return segment.split(",").filter(Boolean);
+}
+
 async function copyText(value: string) {
   await navigator.clipboard.writeText(value);
 }
@@ -63,7 +72,10 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const searchTimer = useRef<number>(0);
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
+  const [kind, setKind] = useState<"all" | "image" | "pdf">("all");
+  const [view, setView] = useState<"grid" | "list">("grid");
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -94,10 +106,31 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
   }, [accessToken]);
 
   useEffect(() => {
-    void load("").catch((err) => {
+    const q = searchParams.get("q") ?? "";
+    setQuery(q);
+    void load(q).catch((err) => {
       setError(err instanceof Error ? err.message : "Could not load assets");
     });
-  }, [load]);
+  }, [load, searchParams]);
+
+  useEffect(() => {
+    function onUpload() {
+      if (!usage.canUpload) {
+        setError("Credits finished. Upgrade your plan to upload more.");
+        return;
+      }
+      uploadInputRef.current?.click();
+    }
+    function onFocusSearch() {
+      document.getElementById("asset-search")?.focus();
+    }
+    window.addEventListener("imagelab-upload", onUpload);
+    window.addEventListener("imagelab-focus-search", onFocusSearch);
+    return () => {
+      window.removeEventListener("imagelab-upload", onUpload);
+      window.removeEventListener("imagelab-focus-search", onFocusSearch);
+    };
+  }, [usage.canUpload]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -131,6 +164,13 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
     [focusId, items, selected],
   );
   const menuAsset = items.find((item) => item.id === menu?.id) ?? null;
+  const visible = useMemo(() => {
+    if (kind === "pdf") return items.filter(isPdf);
+    if (kind === "image") return items.filter((item) => !isPdf(item));
+    return items;
+  }, [items, kind]);
+  const imageCount = items.filter((item) => !isPdf(item)).length;
+  const pdfCount = items.length - imageCount;
 
   function flash(message: string) {
     setNotice(message);
@@ -292,20 +332,58 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <header className="flex shrink-0 items-center gap-4 border-b border-line bg-paper px-5 py-3">
-        <p className="hidden shrink-0 text-sm text-ink/50 md:block">
-          Media library <span className="text-ink/30">/</span> <span className="text-ink">Assets</span>
-        </p>
+    <div id="library" className="flex h-full min-h-0 flex-col">
+      <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-white/10 px-5 py-3">
+        <div className="flex flex-wrap items-center gap-1">
+          {(
+            [
+              ["all", `All (${items.length})`],
+              ["image", `Images (${imageCount})`],
+              ["pdf", `PDFs (${pdfCount})`],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setKind(value)}
+              className={`rounded-lg px-3 py-1.5 font-label-badge text-[12px] ${
+                kind === value
+                  ? "bg-primary-container text-on-primary-container"
+                  : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <label className="relative min-w-0 flex-1">
           <span className="sr-only">Search assets</span>
           <input
+            id="asset-search"
             value={query}
             onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="Search by name, public id, or type…"
-            className="w-full rounded-full border border-line bg-background px-4 py-2 text-sm outline-none focus:border-copper"
+            placeholder="Filter by name, public id, or type"
+            className="h-9 w-full rounded-lg bg-surface-container-low px-3 text-body-sm text-on-surface outline-none focus:bg-surface-container"
           />
         </label>
+        <div className="flex items-center rounded-lg bg-surface-container-low p-0.5">
+          <button
+            type="button"
+            aria-label="Grid view"
+            onClick={() => setView("grid")}
+            className={`rounded p-1.5 ${view === "grid" ? "bg-surface-container text-primary" : "text-on-surface-variant"}`}
+          >
+            <span className="material-symbols-outlined text-[18px]">grid_view</span>
+          </button>
+          <button
+            type="button"
+            aria-label="List view"
+            onClick={() => setView("list")}
+            className={`rounded p-1.5 ${view === "list" ? "bg-surface-container text-primary" : "text-on-surface-variant"}`}
+          >
+            <span className="material-symbols-outlined text-[18px]">view_list</span>
+          </button>
+        </div>
         <button
           type="button"
           disabled={!usage.canUpload || Boolean(uploading)}
@@ -316,7 +394,7 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
             }
             uploadInputRef.current?.click();
           }}
-          className="shrink-0 rounded-full bg-apricot px-4 py-2 text-sm text-paper disabled:opacity-50"
+          className="shrink-0 rounded-lg bg-primary-container px-4 py-2 text-sm text-on-primary-container disabled:opacity-50"
         >
           {uploading || (usage.canUpload ? "Upload" : "Upgrade")}
         </button>
@@ -360,7 +438,7 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
             {selected.size > 0 ? (
               <div className="flex flex-wrap items-center gap-3">
                 <span className="font-medium">{selected.size} selected</span>
-                <button type="button" onClick={() => setSelected(new Set(items.map((item) => item.id)))} className="underline">
+                <button type="button" onClick={() => setSelected(new Set(visible.map((item) => item.id)))} className="underline">
                   Select all
                 </button>
                 <button
@@ -420,40 +498,148 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
           ) : null}
 
           {items.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-line bg-paper px-6 py-16 text-center">
-              <p className="font-serif text-3xl">No assets yet</p>
-              <p className="mt-2 text-sm text-ink/60">Upload images or PDFs, or drop files anywhere in this panel.</p>
+            <div className="rounded-xl border border-dashed border-white/15 bg-surface-container-low px-6 py-16 text-center">
+              <span className="material-symbols-outlined text-[36px] text-primary">upload_file</span>
+              <p className="mt-3 font-headline-sm text-xl text-on-surface">No assets yet</p>
+              <p className="mt-2 text-body-sm text-on-surface-variant">
+                Drop JPEG, PNG, WebP, GIF, AVIF, or PDF files here. Max 10 MB each.
+              </p>
             </div>
-          ) : (
-            <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-              {items.map((asset) => (
+          ) : visible.length === 0 ? (
+            <div className="rounded-xl bg-surface-container-low px-6 py-16 text-center">
+              <p className="font-headline-sm text-xl text-on-surface">Nothing in this filter</p>
+              <p className="mt-2 text-body-sm text-on-surface-variant">Switch back to All assets to see the rest of the library.</p>
+            </div>
+          ) : view === "list" ? (
+            <ul className="overflow-hidden rounded-xl bg-surface-container-low">
+              {visible.map((asset) => (
                 <li key={asset.id}>
                   <article
                     onClick={(event) => selectAsset(asset.id, event.metaKey || event.ctrlKey)}
                     onDoubleClick={() => window.open(asset.url, "_blank", "noreferrer")}
                     onContextMenu={(event) => openMenu(event, asset)}
-                    className={`cursor-pointer overflow-hidden rounded-xl border bg-paper ${
-                      selected.has(asset.id) ? "border-copper ring-2 ring-copper/40" : "border-line"
+                    className={`flex cursor-pointer items-center gap-3 border-b border-white/10 px-3 py-2 last:border-b-0 ${
+                      selected.has(asset.id) ? "bg-primary-container/15" : "hover:bg-surface-container"
                     }`}
                   >
-                    <div className="relative">
-                      <label className="absolute left-2 top-2 z-10" onClick={(event) => event.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={selected.has(asset.id)}
-                          onChange={() => toggleCheckbox(asset.id)}
-                          className="size-4 accent-copper"
-                        />
-                      </label>
-                      <span className="absolute right-2 top-2 rounded bg-ink/70 px-1.5 py-0.5 text-[10px] uppercase text-paper">
-                        {asset.format}
-                      </span>
-                      <AssetThumb asset={asset} className="h-36 w-full object-cover" />
+                    <label onClick={(event) => event.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(asset.id)}
+                        onChange={() => toggleCheckbox(asset.id)}
+                        className="size-4 accent-[#0066ff]"
+                      />
+                    </label>
+                    <AssetThumb asset={asset} className="h-12 w-16 shrink-0 rounded object-cover" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-on-surface">{asset.originalName}</p>
+                      <p className="font-label-badge text-[11px] text-on-surface-variant">
+                        {asset.format.toUpperCase()} · {formatBytes(asset.bytes)}
+                        {asset.width && asset.height ? ` · ${asset.width}×${asset.height}` : ""}
+                      </p>
                     </div>
-                    <p className="truncate px-3 py-2 text-xs">{asset.originalName}</p>
+                    <button
+                      type="button"
+                      className="flex items-center gap-1 text-[11px] text-primary"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void copyText(asset.url).then(() => flash("Public URL copied"));
+                      }}
+                    >
+                      <span className="material-symbols-outlined text-[14px]">content_copy</span>
+                      Copy URL
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Asset options"
+                      className="text-on-surface-variant hover:text-on-surface"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openMenu(event, asset);
+                      }}
+                    >
+                      <span className="material-symbols-outlined text-[18px]">more_vert</span>
+                    </button>
                   </article>
                 </li>
               ))}
+            </ul>
+          ) : (
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {visible.map((asset) => {
+                const tokens = isPdf(asset) ? [] : transformTokens(asset);
+                return (
+                  <li key={asset.id}>
+                    <article
+                      onClick={(event) => selectAsset(asset.id, event.metaKey || event.ctrlKey)}
+                      onDoubleClick={() => window.open(asset.url, "_blank", "noreferrer")}
+                      onContextMenu={(event) => openMenu(event, asset)}
+                      className={`cursor-pointer overflow-hidden rounded-xl bg-surface-container-low ${
+                        selected.has(asset.id) ? "ring-2 ring-primary-container" : ""
+                      }`}
+                    >
+                      <div className="relative">
+                        <label className="absolute left-2 top-2 z-10" onClick={(event) => event.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selected.has(asset.id)}
+                            onChange={() => toggleCheckbox(asset.id)}
+                            className="size-4 accent-[#0066ff]"
+                          />
+                        </label>
+                        <span className="absolute right-2 top-2 rounded bg-surface-dark/80 px-1.5 py-0.5 font-label-badge text-[11px] uppercase text-syntax-green">
+                          {asset.format}
+                        </span>
+                        <AssetThumb asset={asset} className="h-40 w-full object-cover" />
+                      </div>
+                      <div className="flex flex-col gap-1 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-sm font-semibold text-on-surface">{asset.originalName}</p>
+                          <span className="shrink-0 font-label-badge text-[11px] text-on-surface-variant">{formatBytes(asset.bytes)}</span>
+                        </div>
+                        <p className="font-label-badge text-[11px] text-on-surface-variant">
+                          {asset.width && asset.height ? `${asset.width}×${asset.height}` : asset.mime}
+                        </p>
+                        {tokens.length ? (
+                          <div className="flex flex-wrap gap-1">
+                            {tokens.map((token) => (
+                              <span key={token} className="rounded bg-surface-container px-1.5 py-0.5 font-label-badge text-[10px] text-primary">
+                                {token}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                        <div className="mt-1 flex items-center justify-between">
+                          <button
+                            type="button"
+                            className="flex items-center gap-1 text-[11px] text-primary hover:text-on-surface"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void copyText(isPdf(asset) ? asset.url : asset.transformUrl).then(() =>
+                                flash(isPdf(asset) ? "Public URL copied" : "Transform URL copied"),
+                              );
+                            }}
+                          >
+                            <span className="material-symbols-outlined text-[14px]">content_copy</span>
+                            {isPdf(asset) ? "Copy URL" : "Copy edge URL"}
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Asset options"
+                            className="text-on-surface-variant hover:text-on-surface"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openMenu(event, asset);
+                            }}
+                          >
+                            <span className="material-symbols-outlined text-[16px]">more_vert</span>
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>

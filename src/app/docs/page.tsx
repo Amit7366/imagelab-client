@@ -3,8 +3,8 @@ import Link from "next/link";
 import { CodeBlock } from "@/components/code-block";
 
 export const metadata: Metadata = {
-  title: "API docs · ImageLab",
-  description: "Upload, list, update, and delete images and PDFs with an ImageLab API key. Public URLs stay open.",
+  title: "API reference",
+  description: "Upload, list, update, and delete images and PDFs with an Imagelab API key. Public delivery URLs stay open.",
 };
 
 const LIVE_API = "https://api.imagelab.site";

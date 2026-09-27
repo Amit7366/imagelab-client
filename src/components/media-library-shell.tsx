@@ -79,9 +79,17 @@ export function MediaLibraryShell({ children }: { children: React.ReactNode }) {
           {user && can(user.role, "user:read") ? (
             <>
               <p className="mt-6 px-2 text-[11px] font-medium uppercase tracking-[0.18em] text-white/40">Admin</p>
+              {can(user.role, "ops:read") ? (
+                <Link
+                  href="/dashboard/admin"
+                  className={`mt-2 block rounded-lg px-3 py-2 ${pathname === "/dashboard/admin" ? "bg-white/15 text-paper" : "text-white/70 hover:bg-white/10 hover:text-paper"}`}
+                >
+                  Overview
+                </Link>
+              ) : null}
               <Link
-                href="/dashboard/users"
-                className={`mt-2 block rounded-lg px-3 py-2 ${pathname.startsWith("/dashboard/users") ? "bg-white/15 text-paper" : "text-white/70 hover:bg-white/10 hover:text-paper"}`}
+                href="/dashboard/admin/users"
+                className={`mt-1 block rounded-lg px-3 py-2 ${pathname.startsWith("/dashboard/admin/users") || pathname.startsWith("/dashboard/users") ? "bg-white/15 text-paper" : "text-white/70 hover:bg-white/10 hover:text-paper"}`}
               >
                 Users
               </Link>

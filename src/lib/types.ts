@@ -69,6 +69,53 @@ export interface BillingPlansData {
   plans: BillingPlan[];
 }
 
+export interface ManagedUser extends PublicUser {
+  usage: StorageUsage;
+}
+
+export interface UserListData {
+  users: ManagedUser[];
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
+export interface BandwidthTotals {
+  inboundBytes: number;
+  outboundBytes: number;
+  requests: number;
+  originals: number;
+  transforms: number;
+  uploads: number;
+}
+
+export interface AdminOverview {
+  users: { total: number; active: number; paused: number };
+  signups: { last7: number; last30: number; series: Array<{ day: string; count: number }> };
+  storage: {
+    usedBytes: number;
+    originalBytes: number;
+    variantBytes: number;
+    libraryBytes: number;
+    freeBytes: number;
+    capacityBytes: number;
+    usedPercent: number;
+    assets: number;
+  };
+  bandwidth: {
+    last7: BandwidthTotals;
+    last30: BandwidthTotals;
+    series: Array<{ day: string; outboundBytes: number; inboundBytes: number; requests: number }>;
+    note: string;
+  };
+  plans: Record<PlanId, number>;
+  revenue: { estimatedMrrCents: number; paidActive: number; currency: string; note: string };
+  atQuota: number;
+  catalog: { starterCents: number; proCents: number };
+  recent: PublicUser[];
+}
+
 export interface RoleDefinition {
   key: Role;
   label: string;
@@ -124,6 +171,7 @@ export function can(role: Role, permission: string) {
       "user:delete",
       "role:read",
       "role:assign",
+      "ops:read",
       "asset:upload",
       "asset:read",
       "asset:update",

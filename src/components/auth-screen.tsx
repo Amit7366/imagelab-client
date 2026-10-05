@@ -1,34 +1,16 @@
 "use client";
 
-import { Inter, JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { useLayoutEffect, useRef } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { stitchAuthMarkup } from "@/components/stitch-auth-markup";
 import { attachMobileMenu } from "@/components/stitch-mobile-nav";
-
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
-  variable: "--font-jakarta",
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-inter",
-});
-
-const mono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-jetbrains",
-});
+import { bindStitchThemeToggle, useTheme } from "@/components/theme-provider";
 
 const TAB_ACTIVE =
-  "w-1/2 rounded-md bg-primary-container py-2 text-center font-headline-sm text-body-sm font-semibold text-on-primary-container shadow-md transition-all";
+  "w-1/2 rounded-md bg-primary-blue py-2 text-center font-sans text-sm font-semibold text-white shadow-sm transition-all";
 const TAB_IDLE =
-  "w-1/2 rounded-md py-2 text-center font-headline-sm text-body-sm font-semibold text-on-surface-variant hover:text-on-surface transition-all";
+  "w-1/2 rounded-md py-2 text-center font-sans text-sm font-semibold text-navy-muted hover:text-navy-dark transition-all";
 
 const SNIPPET = `import { ImagelabClient } from '@imagelab/sdk';
 const imagelab = new ImagelabClient({ apiKey: 'sk_live_edge_9892cf', zone: 'global-acceleration' });
@@ -84,6 +66,7 @@ function applyMode(root: HTMLElement, mode: AuthMode) {
 export function AuthScreen({ mode }: { mode: AuthMode }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const { login, register } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const router = useRouter();
 
   useLayoutEffect(() => {
@@ -137,7 +120,7 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
 
     on(root.querySelector("#toggle-password"), "click", () => {
       const input = root.querySelector<HTMLInputElement>("#input-password");
-      const icon = root.querySelector("#eye-icon");
+      const icon = root.querySelector("#eye-icon") ?? root.querySelector("#toggle-password");
       if (!input || !icon) return;
       const visible = input.type === "text";
       input.type = visible ? "password" : "text";
@@ -218,17 +201,19 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
     });
 
     const detachMenu = attachMobileMenu(root);
+    const detachTheme = bindStitchThemeToggle(root, toggleTheme, theme);
 
     return () => {
       detachMenu();
+      detachTheme();
       cleanups.forEach((cleanup) => cleanup());
     };
-  }, [login, mode, register, router]);
+  }, [login, mode, register, router, theme, toggleTheme]);
 
   return (
     <div
       ref={rootRef}
-      className={`il-stitch ${jakarta.variable} ${inter.variable} ${mono.variable} min-h-screen bg-surface font-body-md text-body-md text-on-surface antialiased`}
+      className="il-stitch min-h-screen bg-canvas font-body text-navy-body antialiased"
       dangerouslySetInnerHTML={{ __html: stitchAuthMarkup }}
     />
   );

@@ -333,7 +333,7 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
 
   return (
     <div id="library" className="flex h-full min-h-0 flex-col">
-      <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/10 px-3 py-3 sm:gap-3 sm:px-5">
+      <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border-light bg-surface-container-lowest px-3 py-3 sm:gap-3 sm:px-5">
         <div className="flex flex-wrap items-center gap-1">
           {(
             [
@@ -518,7 +518,7 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
                     onClick={(event) => selectAsset(asset.id, event.metaKey || event.ctrlKey)}
                     onDoubleClick={() => window.open(asset.url, "_blank", "noreferrer")}
                     onContextMenu={(event) => openMenu(event, asset)}
-                    className={`flex cursor-pointer items-center gap-3 border-b border-white/10 px-3 py-2 last:border-b-0 ${
+                    className={`flex cursor-pointer items-center gap-3 border-b border-border-light px-3 py-2 last:border-b-0 ${
                       selected.has(asset.id) ? "bg-primary-container/15" : "hover:bg-surface-container"
                     }`}
                   >

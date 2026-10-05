@@ -3,6 +3,7 @@ import { Fraunces, Geist } from "next/font/google";
 import { AuthProvider } from "@/components/auth-provider";
 import { Preloader } from "@/components/preloader";
 import { SiteShell } from "@/components/site-shell";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 const geist = Geist({
@@ -58,13 +59,19 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geist.variable} ${fraunces.variable} h-full antialiased`}>
+    <html lang="en" suppressHydrationWarning className={`${geist.variable} ${fraunces.variable} h-full antialiased`}>
       <head>
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){var p=location.pathname;var dark=p==='/'||p.indexOf('/dashboard')===0||p==='/login'||p==='/register';if(dark)return;var s=document.createElement('style');s.textContent='#il-preloader{background:#ffffff}';document.head.appendChild(s);})();",
+              "(function(){try{var t=localStorage.getItem('imagelab.theme');if(t==='dark'){document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark';}else{document.documentElement.style.colorScheme='light';}}catch(e){}})();",
           }}
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+          rel="stylesheet"
         />
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
@@ -73,9 +80,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-full bg-background text-ink">
         <Preloader />
-        <AuthProvider>
-          <SiteShell>{children}</SiteShell>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <SiteShell>{children}</SiteShell>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -39,7 +39,7 @@ export function ConsoleOverview() {
   const activeKeys = keys.filter((key) => key.status === "active").length;
 
   return (
-    <section className="shrink-0 border-b border-white/10 px-4 py-4 sm:px-6 sm:py-5">
+    <section className="shrink-0 border-b border-border-light bg-surface-container-lowest px-4 py-4 sm:px-6 sm:py-5">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
         <div>
           <p className="font-label-badge text-[11px] text-on-surface-variant">

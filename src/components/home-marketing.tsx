@@ -1,29 +1,11 @@
 "use client";
 
-import { Inter, JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { stitchHomeMarkup } from "@/components/stitch-home-markup";
 import { attachMobileMenu } from "@/components/stitch-mobile-nav";
-
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
-  variable: "--font-jakarta",
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-inter",
-});
-
-const mono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-jetbrains",
-});
+import { bindStitchThemeToggle, useTheme } from "@/components/theme-provider";
 
 const TAB_ACTIVE =
   "px-5 py-2.5 rounded-lg font-headline-sm text-body-sm font-semibold transition-all bg-primary-container text-on-primary-container shadow-md";
@@ -37,6 +19,7 @@ const BILLING_IDLE =
 export function HomeMarketing() {
   const rootRef = useRef<HTMLDivElement>(null);
   const { user, ready, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const signedIn = ready && Boolean(user);
 
@@ -75,6 +58,8 @@ export function HomeMarketing() {
       if (long && short) {
         long.textContent = signedIn ? "Open dashboard" : "Start Free — 25 GB Included";
         short.textContent = signedIn ? "Dashboard" : "Start free";
+      } else {
+        start.textContent = signedIn ? "Open dashboard" : "Start Free — 25 GB Included";
       }
     }
 
@@ -194,6 +179,7 @@ export function HomeMarketing() {
     });
 
     const detachMenu = attachMobileMenu(root);
+    const detachTheme = bindStitchThemeToggle(root, toggleTheme, theme);
     if (signedIn) {
       const list = root.querySelector(".il-menu-list");
       const item = document.createElement("button");
@@ -207,15 +193,16 @@ export function HomeMarketing() {
 
     return () => {
       detachMenu();
+      detachTheme();
       logoutBtn?.remove();
       cleanups.forEach((cleanup) => cleanup());
     };
-  }, [logout, router, signedIn]);
+  }, [logout, router, signedIn, theme, toggleTheme]);
 
   return (
     <div
       ref={rootRef}
-      className={`il-stitch ${jakarta.variable} ${inter.variable} ${mono.variable} min-h-screen bg-surface font-body-md text-body-md text-on-surface antialiased`}
+      className="il-stitch min-h-screen bg-surface font-body-md text-body-md text-on-surface antialiased"
       dangerouslySetInnerHTML={{ __html: stitchHomeMarkup }}
     />
   );

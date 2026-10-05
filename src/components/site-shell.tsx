@@ -11,7 +11,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
   const isDocs = pathname.startsWith("/docs");
 
   if (isLibrary) {
-    return <div className="h-screen overflow-hidden bg-surface-dark text-on-surface">{children}</div>;
+    return <div className="h-screen overflow-hidden bg-surface-container-high text-on-surface">{children}</div>;
   }
 
   if (isDocs) {

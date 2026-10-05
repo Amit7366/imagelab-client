@@ -1,31 +1,13 @@
 "use client";
 
-import { Inter, JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { BrandLogo } from "@/components/brand-logo";
+import { ThemeToggle, useTheme } from "@/components/theme-provider";
 import { api } from "@/lib/api";
 import { PLAN_LABELS, ROLE_LABELS, can, type ApiSuccess, type BillingPlansData, type PlanId } from "@/lib/types";
-
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
-  variable: "--font-jakarta",
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-inter",
-});
-
-const mono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-jetbrains",
-});
 
 type Credits = {
   remaining: number;
@@ -50,6 +32,7 @@ export function MediaLibraryShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, accessToken, logout } = useAuth();
+  const { theme } = useTheme();
   const [credits, setCredits] = useState<Credits | null>(null);
   const [hash, setHash] = useState("");
   const [search, setSearch] = useState("");
@@ -128,12 +111,12 @@ export function MediaLibraryShell({ children }: { children: React.ReactNode }) {
   const groups = ["Console", "Library", "Delivery", "Account"];
 
   return (
-    <div className={`console flex h-full min-h-0 flex-col bg-surface-dark text-on-surface ${jakarta.variable} ${inter.variable} ${mono.variable}`}>
-      <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-surface-dark/80 px-3 backdrop-blur-xl sm:gap-4 sm:px-4">
+    <div className="console flex h-full min-h-0 flex-col bg-surface-container-high text-on-surface">
+      <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-border-light bg-surface-container-lowest px-3 backdrop-blur-md sm:gap-4 sm:px-4">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <button
             type="button"
-            className="inline-flex size-9 items-center justify-center rounded-lg bg-surface-container text-on-surface md:hidden"
+            className="inline-flex size-9 items-center justify-center rounded-lg border border-border-light bg-surface-container text-on-surface md:hidden"
             aria-expanded={navOpen}
             aria-label={navOpen ? "Close menu" : "Open menu"}
             onClick={() => setNavOpen((open) => !open)}
@@ -141,9 +124,9 @@ export function MediaLibraryShell({ children }: { children: React.ReactNode }) {
             <Icon name={navOpen ? "close" : "menu"} className="text-[22px]" />
           </button>
           <Link href="/" className="flex shrink-0 items-center">
-            <BrandLogo tone="on-dark" height={28} priority />
+            <BrandLogo tone={theme === "dark" ? "on-dark" : "on-light"} height={28} priority />
           </Link>
-          <span className="hidden h-4 w-px bg-surface-container-highest md:block" />
+          <span className="hidden h-4 w-px bg-border-light md:block" />
           {user ? (
             <div className="hidden min-w-0 items-center gap-2 rounded bg-surface-container-low px-2 py-1 md:flex">
               <Icon name="layers" className="text-[16px] text-on-surface-variant" />
@@ -174,19 +157,20 @@ export function MediaLibraryShell({ children }: { children: React.ReactNode }) {
             <Icon name="search" className="text-[22px]" />
           </button>
           <form onSubmit={submitSearch} className="hidden items-center sm:flex">
-            <label className="flex items-center gap-2 rounded-lg bg-surface-container-low px-3 py-1.5 text-on-surface-variant">
+            <label className="flex items-center gap-2 rounded-lg border border-border-light bg-surface-container-high px-3 py-1.5 text-on-surface-variant">
               <Icon name="search" className="text-[18px]" />
               <span className="sr-only">Search assets</span>
               <input
                 id="console-search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search assets"
+                placeholder="Quick search..."
                 className="w-36 bg-transparent text-body-sm text-on-surface outline-none placeholder:text-on-surface-variant lg:w-52"
               />
-              <span className="rounded bg-surface-container px-1.5 py-0.5 font-label-badge text-[10px] text-on-surface-variant">⌘K</span>
+              <span className="rounded border border-border-light bg-surface-container-lowest px-1.5 py-0.5 font-label-badge text-[10px] text-on-surface-variant">⌘K</span>
             </label>
           </form>
+          <ThemeToggle />
           <Link href="/docs" className="hidden text-body-sm text-on-surface-variant hover:text-on-surface xl:inline">
             Docs
           </Link>
@@ -208,7 +192,7 @@ export function MediaLibraryShell({ children }: { children: React.ReactNode }) {
           />
         ) : null}
         <aside
-          className={`flex w-64 shrink-0 flex-col justify-between overflow-y-auto border-r border-white/10 bg-surface-container-lowest p-4 max-md:fixed max-md:inset-y-16 max-md:left-0 max-md:z-40 max-md:w-[min(18rem,88vw)] max-md:shadow-2xl ${
+          className={`flex w-64 shrink-0 flex-col justify-between overflow-y-auto border-r border-border-light bg-surface-container-lowest p-4 max-md:fixed max-md:inset-y-16 max-md:left-0 max-md:z-40 max-md:w-[min(18rem,88vw)] max-md:shadow-2xl ${
             navOpen ? "max-md:flex" : "max-md:hidden"
           }`}
         >
@@ -231,8 +215,8 @@ export function MediaLibraryShell({ children }: { children: React.ReactNode }) {
                             }}
                             className={`flex items-center gap-2 rounded-lg px-3 py-2 text-body-sm transition-colors ${
                               isActive
-                                ? "bg-primary-container font-semibold text-on-primary-container"
-                                : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
+                                ? "bg-primary-container font-semibold text-on-primary-container shadow-sm"
+                                : "text-slate-navy hover:border-border-light hover:bg-surface-container-high hover:text-deep-navy"
                             }`}
                           >
                             <Icon name={link.icon} className="text-[20px]" />

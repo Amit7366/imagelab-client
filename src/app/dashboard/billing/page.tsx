@@ -103,7 +103,7 @@ function BillingInner() {
       <p className="text-sm uppercase tracking-[0.2em] text-copper">Billing</p>
       <h1 className="mt-2 font-serif text-4xl">Plan and credits</h1>
       <p className="mt-3 max-w-xl text-sm text-ink/60">
-        Free accounts include 25 credits (1 credit = 1 MB stored). When credits run out you can still view and share public URLs, but uploads pause until you upgrade or delete files.
+        Free accounts include 250 credits (1 credit = 1 MB stored). When credits run out you can still view and share public URLs, but uploads pause until you upgrade or delete files.
       </p>
 
       {error ? <p className="mt-4 text-sm text-copper">{error}</p> : null}

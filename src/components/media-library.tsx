@@ -2,18 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
-import type { ApiSuccess, AssetListData, PublicAsset, StorageUsage } from "@/lib/types";
-
-const ACCEPT = "image/jpeg,image/png,image/webp,image/gif,image/avif,application/pdf";
-const MAX_BYTES = 10 * 1024 * 1024;
+import type { ApiSuccess, AssetListData, FolderListData, PublicAsset, PublicFolder, StorageUsage } from "@/lib/types";
+import { ACCEPT, MAX_UPLOAD_BYTES, collectDropped, filesToQueue, isAllowedFile, type QueueItem } from "@/lib/upload-queue";
+import { UploadQueueModal } from "@/components/upload-queue-modal";
 const EMPTY_USAGE: StorageUsage = {
   usedBytes: 0,
-  quotaBytes: 25 * 1024 * 1024,
+  quotaBytes: 250 * 1024 * 1024,
   usedCredits: 0,
-  quotaCredits: 25,
-  remainingCredits: 25,
+  quotaCredits: 250,
+  remainingCredits: 250,
   plan: "free",
   canUpload: true,
 };
@@ -30,11 +29,6 @@ function formatDate(value: string) {
 
 function isPdf(asset: PublicAsset) {
   return asset.format === "pdf" || asset.mime === "application/pdf";
-}
-
-function isAllowedFile(file: File) {
-  if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) return true;
-  return file.type.startsWith("image/") && file.type !== "image/svg+xml";
 }
 
 function previewSrc(asset: PublicAsset) {
@@ -70,17 +64,22 @@ function AssetThumb({ asset, className }: { asset: PublicAsset; className?: stri
 
 export function MediaLibrary({ accessToken }: { accessToken: string }) {
   const uploadInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const searchTimer = useRef<number>(0);
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const folderId = searchParams.get("folder");
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<"all" | "image" | "pdf">("all");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [uploading, setUploading] = useState("");
   const [items, setItems] = useState<PublicAsset[]>([]);
+  const [folders, setFolders] = useState<PublicFolder[]>([]);
+  const [breadcrumb, setBreadcrumb] = useState<PublicFolder[]>([]);
   const [usage, setUsage] = useState<StorageUsage>(EMPTY_USAGE);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [focusId, setFocusId] = useState<string | null>(null);
@@ -91,24 +90,48 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
   const [confirmBulk, setConfirmBulk] = useState(false);
   const [busy, setBusy] = useState(false);
   const [replaceId, setReplaceId] = useState<string | null>(null);
+  const [uploadMenu, setUploadMenu] = useState(false);
+  const [queue, setQueue] = useState<QueueItem[] | null>(null);
 
-  const load = useCallback(async (search = "") => {
+  const libraryPath = pathname.startsWith("/dashboard/folders") ? "/dashboard/folders" : "/dashboard";
+
+  function goToFolder(id: string | null, search = query) {
+    const params = new URLSearchParams();
+    if (search.trim()) params.set("q", search.trim());
+    if (id && !search.trim()) params.set("folder", id);
+    const qs = params.toString();
+    router.replace(qs ? `${libraryPath}?${qs}` : libraryPath);
+  }
+
+  const load = useCallback(async (search = "", currentFolder = folderId) => {
     const q = search.trim();
-    const path = q ? `/assets?q=${encodeURIComponent(q)}` : "/assets";
-    const result = await api<ApiSuccess<AssetListData>>(path, {}, accessToken);
-    setItems(result.data.items);
-    setUsage(result.data.usage);
+    const assetParams = new URLSearchParams();
+    if (q) assetParams.set("q", q);
+    else if (currentFolder) assetParams.set("folder", currentFolder);
+    const assetPath = assetParams.toString() ? `/assets?${assetParams}` : "/assets";
+    const folderPath = currentFolder && !q ? `/folders?parent=${encodeURIComponent(currentFolder)}` : "/folders";
+
+    const [assetResult, folderResult] = await Promise.all([
+      api<ApiSuccess<AssetListData>>(assetPath, {}, accessToken),
+      q
+        ? Promise.resolve({ data: { folders: [], breadcrumb: [], parentId: null } as FolderListData })
+        : api<ApiSuccess<FolderListData>>(folderPath, {}, accessToken),
+    ]);
+    setItems(assetResult.data.items);
+    setUsage(assetResult.data.usage);
+    setFolders(folderResult.data.folders);
+    setBreadcrumb(folderResult.data.breadcrumb);
     setSelected((current) => {
-      const ids = new Set(result.data.items.map((item) => item.id));
+      const ids = new Set(assetResult.data.items.map((item) => item.id));
       return new Set([...current].filter((id) => ids.has(id)));
     });
-    setFocusId((current) => (current && result.data.items.some((item) => item.id === current) ? current : null));
-  }, [accessToken]);
+    setFocusId((current) => (current && assetResult.data.items.some((item) => item.id === current) ? current : null));
+  }, [accessToken, folderId]);
 
   useEffect(() => {
     const q = searchParams.get("q") ?? "";
     setQuery(q);
-    void load(q).catch((err) => {
+    void load(q, searchParams.get("folder")).catch((err) => {
       setError(err instanceof Error ? err.message : "Could not load assets");
     });
   }, [load, searchParams]);
@@ -119,7 +142,7 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
         setError("Credits finished. Upgrade your plan to upload more.");
         return;
       }
-      uploadInputRef.current?.click();
+      setUploadMenu(true);
     }
     function onFocusSearch() {
       document.getElementById("asset-search")?.focus();
@@ -150,6 +173,7 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
     }
     function onClick() {
       setMenu(null);
+      setUploadMenu(false);
     }
     window.addEventListener("keydown", onKey);
     window.addEventListener("click", onClick);
@@ -181,47 +205,24 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
     setQuery(value);
     window.clearTimeout(searchTimer.current);
     searchTimer.current = window.setTimeout(() => {
-      void load(value).catch((err) => setError(err instanceof Error ? err.message : "Search failed"));
+      goToFolder(value.trim() ? null : folderId, value);
     }, 250);
   }
 
-  async function uploadFiles(files: FileList | File[]) {
-    const list = [...files];
-    if (!list.length) return;
+  function queueFiles(files: File[], emptyFolders: string[] = []) {
     if (!usage.canUpload) {
       setError("Credits finished. Upgrade your plan to upload more.");
       return;
     }
+    const next = filesToQueue(files, emptyFolders);
+    if (!next.length) {
+      setError("No files to upload.");
+      return;
+    }
     setError("");
     setConfirmBulk(false);
-    for (const [index, file] of list.entries()) {
-      if (!isAllowedFile(file)) {
-        setError("Use JPEG, PNG, WebP, GIF, AVIF, or PDF.");
-        return;
-      }
-      if (file.size > MAX_BYTES) {
-        setError("File is too large. Max 10 MB.");
-        return;
-      }
-      const body = new FormData();
-      body.append("file", file);
-      setUploading(`Uploading ${index + 1} of ${list.length}`);
-      try {
-        const result = await api<ApiSuccess<PublicAsset>>("/assets", { method: "POST", body }, accessToken);
-        setFocusId(result.data.id);
-        setSelected(new Set([result.data.id]));
-      } catch (err) {
-        setUploading("");
-        if (err instanceof ApiError && err.status === 402) {
-          setError("Credits finished. Upgrade your plan to upload more.");
-        } else {
-          setError(err instanceof ApiError || err instanceof Error ? err.message : "Upload failed");
-        }
-        return;
-      }
-    }
-    setUploading("");
-    await load();
+    setUploadMenu(false);
+    setQueue(next);
   }
 
   function selectAsset(id: string, additive: boolean) {
@@ -295,7 +296,7 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
       setError("Use JPEG, PNG, WebP, GIF, AVIF, or PDF.");
       return;
     }
-    if (file.size > MAX_BYTES) {
+    if (file.size > MAX_UPLOAD_BYTES) {
       setError("File is too large. Max 10 MB.");
       return;
     }
@@ -384,20 +385,46 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
             <span className="material-symbols-outlined text-[18px]">view_list</span>
           </button>
         </div>
-        <button
-          type="button"
-          disabled={!usage.canUpload || Boolean(uploading)}
-          onClick={() => {
-            if (!usage.canUpload) {
-              setError("Credits finished. Upgrade your plan to upload more.");
-              return;
-            }
-            uploadInputRef.current?.click();
-          }}
-          className="shrink-0 rounded-lg bg-primary-container px-4 py-2 text-sm text-on-primary-container disabled:opacity-50"
-        >
-          {uploading || (usage.canUpload ? "Upload" : "Upgrade")}
-        </button>
+        <div className="relative" onClick={(event) => event.stopPropagation()}>
+          <button
+            type="button"
+            disabled={!usage.canUpload || Boolean(queue)}
+            onClick={() => {
+              if (!usage.canUpload) {
+                setError("Credits finished. Upgrade your plan to upload more.");
+                return;
+              }
+              setUploadMenu((open) => !open);
+            }}
+            className="shrink-0 rounded-lg bg-primary-container px-4 py-2 text-sm text-on-primary-container disabled:opacity-50"
+          >
+            {usage.canUpload ? "Upload" : "Upgrade"}
+          </button>
+          {uploadMenu ? (
+            <div className="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-line bg-paper text-sm shadow-lg">
+              <button
+                type="button"
+                className="block w-full px-4 py-2.5 text-left hover:bg-sand"
+                onClick={() => {
+                  setUploadMenu(false);
+                  uploadInputRef.current?.click();
+                }}
+              >
+                Files
+              </button>
+              <button
+                type="button"
+                className="block w-full px-4 py-2.5 text-left hover:bg-sand"
+                onClick={() => {
+                  setUploadMenu(false);
+                  folderInputRef.current?.click();
+                }}
+              >
+                Folder
+              </button>
+            </div>
+          ) : null}
+        </div>
         <input
           ref={uploadInputRef}
           type="file"
@@ -405,7 +432,17 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
           multiple
           className="sr-only"
           onChange={(event) => {
-            if (event.target.files) void uploadFiles(event.target.files);
+            if (event.target.files) queueFiles([...event.target.files]);
+            event.target.value = "";
+          }}
+        />
+        <input
+          ref={folderInputRef}
+          type="file"
+          className="sr-only"
+          {...{ webkitdirectory: "", directory: "" }}
+          onChange={(event) => {
+            if (event.target.files) queueFiles([...event.target.files]);
             event.target.value = "";
           }}
         />
@@ -426,15 +463,32 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
             setError("Credits finished. Upgrade your plan to upload more.");
             return;
           }
-          void uploadFiles(event.dataTransfer.files);
+          void collectDropped(event.dataTransfer).then(({ files, emptyFolders }) => {
+            queueFiles(files, emptyFolders);
+          });
         }}
       >
         <section className={`min-w-0 flex-1 overflow-y-auto p-3 sm:p-5 ${dragOver ? "bg-copper/5" : ""} ${focused ? "sm:pr-[23.5rem]" : ""}`}>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-            <p className="text-ink/60">
-              {items.length} {items.length === 1 ? "asset" : "assets"} · {usage.usedCredits} / {usage.quotaCredits} credits ·{" "}
-              {formatBytes(usage.usedBytes)} of {formatBytes(usage.quotaBytes)}
-            </p>
+            <div>
+              <nav className="flex flex-wrap items-center gap-1 text-ink/60">
+                <button type="button" className="hover:text-ink" onClick={() => goToFolder(null, "")}>
+                  Library
+                </button>
+                {breadcrumb.map((crumb) => (
+                  <span key={crumb.id} className="flex items-center gap-1">
+                    <span>/</span>
+                    <button type="button" className="hover:text-ink" onClick={() => goToFolder(crumb.id, "")}>
+                      {crumb.name}
+                    </button>
+                  </span>
+                ))}
+              </nav>
+              <p className="mt-1 text-ink/60">
+                {folders.length} {folders.length === 1 ? "folder" : "folders"} · {items.length} {items.length === 1 ? "asset" : "assets"} · {usage.usedCredits} / {usage.quotaCredits} credits ·{" "}
+                {formatBytes(usage.usedBytes)} of {formatBytes(usage.quotaBytes)}
+              </p>
+            </div>
             {selected.size > 0 ? (
               <div className="flex flex-wrap items-center gap-3">
                 <span className="font-medium">{selected.size} selected</span>
@@ -497,21 +551,34 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
             </p>
           ) : null}
 
-          {items.length === 0 ? (
+          {folders.length === 0 && items.length === 0 ? (
             <div className="rounded-xl border border-dashed border-white/15 bg-surface-container-low px-6 py-16 text-center">
               <span className="material-symbols-outlined text-[36px] text-primary">upload_file</span>
               <p className="mt-3 font-headline-sm text-xl text-on-surface">No assets yet</p>
               <p className="mt-2 text-body-sm text-on-surface-variant">
-                Drop JPEG, PNG, WebP, GIF, AVIF, or PDF files here. Max 10 MB each.
+                Choose files or a folder, then confirm to upload. JPEG, PNG, WebP, GIF, AVIF, or PDF. Max 10 MB each.
               </p>
             </div>
-          ) : visible.length === 0 ? (
+          ) : visible.length === 0 && folders.length === 0 ? (
             <div className="rounded-xl bg-surface-container-low px-6 py-16 text-center">
               <p className="font-headline-sm text-xl text-on-surface">Nothing in this filter</p>
               <p className="mt-2 text-body-sm text-on-surface-variant">Switch back to All assets to see the rest of the library.</p>
             </div>
           ) : view === "list" ? (
             <ul className="overflow-hidden rounded-xl bg-surface-container-low">
+              {folders.map((folder) => (
+                <li key={folder.id}>
+                  <button
+                    type="button"
+                    onClick={() => goToFolder(folder.id, "")}
+                    className="flex w-full items-center gap-3 border-b border-border-light px-3 py-3 text-left hover:bg-surface-container"
+                  >
+                    <span className="material-symbols-outlined text-[22px] text-copper">folder</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{folder.name}</span>
+                    <span className="text-xs text-ink/45">Folder</span>
+                  </button>
+                </li>
+              ))}
               {visible.map((asset) => (
                 <li key={asset.id}>
                   <article
@@ -566,6 +633,19 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
             </ul>
           ) : (
             <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {folders.map((folder) => (
+                <li key={folder.id}>
+                  <button
+                    type="button"
+                    onClick={() => goToFolder(folder.id, "")}
+                    className="flex h-full w-full flex-col items-start rounded-xl bg-surface-container-low p-4 text-left hover:bg-surface-container"
+                  >
+                    <span className="material-symbols-outlined text-[36px] text-copper">folder</span>
+                    <p className="mt-3 truncate text-sm font-semibold text-on-surface">{folder.name}</p>
+                    <p className="mt-1 text-xs text-on-surface-variant">Open folder</p>
+                  </button>
+                </li>
+              ))}
               {visible.map((asset) => {
                 const tokens = isPdf(asset) ? [] : transformTokens(asset);
                 return (
@@ -856,6 +936,20 @@ export function MediaLibrary({ accessToken }: { accessToken: string }) {
             </div>
           </form>
         </div>
+      ) : null}
+
+      {queue ? (
+        <UploadQueueModal
+          accessToken={accessToken}
+          currentFolderId={folderId}
+          items={queue}
+          onClose={() => setQueue(null)}
+          onFinished={(openFolderId) => {
+            void load(query, openFolderId ?? folderId).then(() => {
+              if (openFolderId) goToFolder(openFolderId, "");
+            });
+          }}
+        />
       ) : null}
     </div>
   );

@@ -33,6 +33,7 @@ export interface PublicAsset {
   format: string;
   mime: string;
   originalName: string;
+  folderId: string | null;
   url: string;
   transformUrl: string;
   createdAt: string;
@@ -42,6 +43,20 @@ export interface PublicAsset {
 export interface AssetListData {
   items: PublicAsset[];
   usage: StorageUsage;
+}
+
+export interface PublicFolder {
+  id: string;
+  parentId: string | null;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FolderListData {
+  folders: PublicFolder[];
+  breadcrumb: PublicFolder[];
+  parentId: string | null;
 }
 
 export interface StorageUsage {

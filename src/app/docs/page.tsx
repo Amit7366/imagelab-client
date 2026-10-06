@@ -208,7 +208,7 @@ GET ${LIVE_API}/image/upload/w_800,f_auto,q_auto/{publicId}`}
         <section id="credits" className="scroll-mt-8">
           <h2 className="font-serif text-3xl text-ink">Credits</h2>
           <p className="mt-3">
-            API uploads use the same plan quota as the dashboard. 1 credit = 1 MiB stored. Free is 25 credits. Starter is 1,024.
+            API uploads use the same plan quota as the dashboard. 1 credit = 1 MiB stored. Free is 250 credits. Starter is 1,024.
             Pro is 10,240. Used credits are the sum of ready file sizes, not a spent counter. Deleting a file frees credits. Views
             and transforms never consume credits. When the file would not fit, upload and replace return <code>402</code> with
             “Credits finished. Upgrade your plan to upload more.”
@@ -251,7 +251,7 @@ GET ${LIVE_API}/image/upload/w_800,f_auto,q_auto/{publicId}`}
         <section id="limits" className="scroll-mt-8">
           <h2 className="font-serif text-3xl text-ink">Rate limits</h2>
           <p className="mt-3">
-            API keys are limited to 120 requests per minute per key on media routes. Uploads and replacements are also limited to 40
+            API keys are limited to 120 requests per minute per key on media routes. Uploads and replacements are also limited to 200
             per 15 minutes per account. Standard rate-limit headers are included.
           </p>
           <p className="mt-6">
